@@ -113,6 +113,7 @@ class ApiMergeGlue extends ApiMergeBase {
     public function __construct(){
         static::$pool = array();
         static::$base = '';
+        static::$alias = array();
         $this->_combine();
     }
 }
