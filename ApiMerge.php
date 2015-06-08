@@ -6,13 +6,13 @@
  */
 class ApiMerge extends ApiMergeGlue {
     function define($id, $cmd){
-        return call_user_func_array($this->_invoker_define, func_get_args());
+        return call_user_func_array($this->_method_define, func_get_args());
     }
-    function import(array $apis, Closure $callback){
-        return call_user_func_array($this->_invoker_import, func_get_args());
+    function invoke(array $apis, Closure $callback){
+        return call_user_func_array($this->_method_invoke, func_get_args());
     }
     function config(array $conf){
-        call_user_func_array($this->_invoker_config, func_get_args());
+        call_user_func_array($this->_method_config, func_get_args());
     }
 }
 
@@ -51,12 +51,12 @@ class ApiMergeDefine extends ApiMergeBase {
 
 
 //引用模块
-class ApiMergeImport extends ApiMergeBase {
+class ApiMergeInvoke extends ApiMergeBase {
     public $apis = array();
     public $result = array();
     
-    public function import($apis, $callback){
-    	echo 'ApiMergeImport::import()<br>';
+    public function invoke($apis, $callback){
+    	echo 'ApiMergeInvoke::invoke()<br>';
     	$results = array();
     	foreach ($apis as $id => $a) {
     	    $id = $this->_getRealID($id);
@@ -98,7 +98,7 @@ class ApiMergeConfig extends ApiMergeBase {
 
 //合并模块
 class ApiMergeGlue extends ApiMergeBase {
-    private $_names = array('define', 'import', 'config');
+    private $_names = array('define', 'invoke', 'config');
     
     private function _init(){
         static::$pool = array();
@@ -111,7 +111,7 @@ class ApiMergeGlue extends ApiMergeBase {
             $class = 'ApiMerge'.ucfirst($n);
             $o = new $class();
             foreach ($o as $i => $e) { $this->$i = $e; }
-            $this->{'_invoker_'.$n} = function() use ($o, $n) {
+            $this->{'_method_'.$n} = function() use ($o, $n) {
                 return call_user_func_array(array($o, $n), func_get_args());
             };
         }
@@ -146,7 +146,7 @@ class ApiDemo {
 class ApiMergeTest {
     static function test1(){
         $am = new ApiMerge();
-        $am->import(array('ApiDemo/api1','ApiDemo/api2'), function($A1, $A2){
+        $am->invoke(array('ApiDemo/api1','ApiDemo/api2'), function($A1, $A2){
             dump(compact('A1', 'A2'));
         });
     }
@@ -156,7 +156,7 @@ class ApiMergeTest {
             $LIB = $require('lib/mylib');
             $export['foo'] = $LIB->foo();
         });
-        $am->import(array('mypack'), function($M){
+        $am->invoke(array('mypack'), function($M){
             dump($M);
         });
     }
@@ -169,14 +169,14 @@ class ApiMergeTest {
                 'bar' => $LIB->bar(),
             );
         });
-        $am->import(array('mypack'), function($M){
+        $am->invoke(array('mypack'), function($M){
             dump($M);
         });
         dump($am);
     }
     static function test4(){ //已实现
         $am = new ApiMerge();
-        $results = $am->import(array(
+        $results = $am->invoke(array(
             'ApiDemo/api1' => array(),
             'ApiDemo/api2' => array('a', 'b'),
             'ApiDemo/api3' => array('contents')
@@ -193,7 +193,7 @@ class ApiMergeTest {
                 'fooAlia' => 'ApiDemo/api3'
             ),
         ));
-        $results = $am->import(array(
+        $results = $am->invoke(array(
             'api1' => array(),
             'api2' => array('a', 'b'),
             'fooAlia' => array('contents')
