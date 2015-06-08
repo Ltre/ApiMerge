@@ -114,6 +114,7 @@ class ApiMergeConfig extends ApiMergeBase {
 class ApiMergeGlue extends ApiMergeBase {
     private $_names = array('define', 'invoke', 'config');
     
+    //在重新初始化组合对象ApiMerge时，清空所有静态属性
     private function _init(){
         static::$pool = array();
         static::$base = '';
@@ -131,7 +132,6 @@ class ApiMergeGlue extends ApiMergeBase {
         }
     }
     
-    //在重新初始化组合对象ApiMerge时，清空所有静态属性
     public function __construct(){
         $this->_init();
         $this->_combine();
