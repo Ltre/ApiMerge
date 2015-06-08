@@ -8,7 +8,8 @@ class ApiMerge extends ApiMergeGlue {
     function define($id, $cmd){
         return call_user_func_array($this->_method_define, func_get_args());
     }
-    function invoke(array $apis, Closure $callback = null){
+    function invoke($apis = array(), Closure $callback = null){
+        $apis = is_array($apis) ? $apis : array($apis);
         $callback || $callback = function(){};
         return call_user_func_array($this->_method_invoke, array($apis, $callback));
     }
@@ -38,7 +39,6 @@ class ApiMergeDefine extends ApiMergeBase {
 //引用模块
 class ApiMergeInvoke extends ApiMergeBase {
     public $apis = array();
-    public $result = array();
     
     public function invoke($apis, $callback){
     	//echo 'ApiMergeInvoke::invoke()<br>';
@@ -46,7 +46,7 @@ class ApiMergeInvoke extends ApiMergeBase {
     	foreach ($apis as $left => $right) {
     	    $r = $this->_apisFilter($left, $right);
     	    $id = $r==2 ? $this->_getRealID($left) : $this->_getRealID($right);
-    	    $params = $r==2 ? $right : array();
+    	    $params = $r==2 ? $this->_packParams($right) : array();
     	    $callee = $this->_getCallee($id);
     	    $results[$id] = call_user_func_array($callee, $params);
     	}
@@ -59,8 +59,7 @@ class ApiMergeInvoke extends ApiMergeBase {
         $leftIsID = preg_match($re, $left);
         $leftIsIndex = is_int($left) && $left >= 0;
         $rightIsID = is_string($right) && preg_match($re, $right);
-        $rightIsParam = is_array($right);
-        if ($leftIsID && $rightIsParam) return 2;//传了键值对：id=>参数表
+        if ($leftIsID) return 2;//传了键值对：id=>参数表
         if ($leftIsIndex && $rightIsID) return 1;//只传了id
         throw new Exception('invoke操作中：引入参数格式有误', 0, NULL);
     }
@@ -80,6 +79,10 @@ class ApiMergeInvoke extends ApiMergeBase {
             $callee = array(new $ex[0], $ex[1]);
         }
         return $callee;
+    }
+    //正确包装参数表(仅包裹数字、字符串，若要传数组，请再自行包一层array)
+    private function _packParams($params){
+        return is_array($params) ? $params : array($params);
     }
 }
 
@@ -131,15 +134,14 @@ class ApiDemo {
     function api1(){
         return 'this is api1';
     }
-    
     function api2($a, $b){
         return compact('a', 'b');
     }
-    
     function api3($content){
         file_put_contents(DI_LOG_PATH.'log.api3.txt', $content);//do something
     }
 }
+
 //测试用例
 class ApiMergeTest {
     static function test1(){ //已实现
@@ -197,5 +199,19 @@ class ApiMergeTest {
             dump(compact('A1', 'A2', 'A3'));
         });
         dump($results);
+    }
+    static function test6(){
+        $am = new ApiMerge();
+        $am->config(array(
+        	'base' => 'ApiDemo',
+            'alias' => array(
+                'foo' => 'a/b/c/d'
+            )
+        ));
+        $am->define('a/b/c/d', function($p) use ($am) {
+            echo "this is $p <br>";
+            return $am->invoke('api1');
+        });
+        $am->invoke(array('foo'=>'valueP'));
     }
 }
