@@ -33,10 +33,12 @@ class ApiMergeDefine extends ApiMergeBase {
     private function _setRequire(){
         $this->require = function(){};
     }
+    
     private function _setExport(){
         $this->export = function(){};
     }
-    function __construct(){
+    
+    public function __construct(){
         $this->_setRequire();
         $this->_setExport();
     }
@@ -74,7 +76,7 @@ class ApiMergeImport extends ApiMergeBase {
     //获取需要回调的callable
     private function _getCallee($id){
         @$callee = static::$pool[$id];
-        $inPool = ($callee) instanceof Closure;
+        $inPool = $callee instanceof Closure;
         if (! $inPool) {
             $ex = explode('/', $id);
             $callee = array(new $ex[0], $ex[1]);
@@ -98,6 +100,12 @@ class ApiMergeConfig extends ApiMergeBase {
 class ApiMergeGlue extends ApiMergeBase {
     private $_names = array('define', 'import', 'config');
     
+    private function _init(){
+        static::$pool = array();
+        static::$base = '';
+        static::$alias = array();
+    }
+    
     private function _combine(){
         foreach ($this->_names as $n) {
             $class = 'ApiMerge'.ucfirst($n);
@@ -111,9 +119,7 @@ class ApiMergeGlue extends ApiMergeBase {
     
     //在重新初始化组合对象ApiMerge时，清空所有静态属性
     public function __construct(){
-        static::$pool = array();
-        static::$base = '';
-        static::$alias = array();
+        $this->_init();
         $this->_combine();
     }
 }
