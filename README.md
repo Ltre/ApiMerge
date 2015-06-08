@@ -23,39 +23,37 @@ class ApiDemo {
 import('ApiMerge');
 
 class ApiMergeTest {
-    static function test1(){ //实现中
+    static function test1(){ //已实现
         $am = new ApiMerge();
-        $am->import(array('ApiDemo/api1','ApiDemo/api2'), function($A1, $A2){
+        $am->invoke(array('ApiDemo/api1','ApiDemo/api2'=>array('a1', 'b2')), function($A1, $A2){
             dump(compact('A1', 'A2'));
         });
+        $am->invoke(array('ApiDemo/api3'=>array('this is log')));
     }
-    static function test2(){ //实现中
+    static function test2(){ //已实现
         $am = new ApiMerge();
-        $am->define('mypack', function($require, $export){
-            $LIB = $require('lib/mylib');
-            $export['foo'] = $LIB->foo();
+        $am->define('mypack', function(){
+            echo 'this is mypack<br>';
         });
-        $am->import(array('mypack'), function($M){
-            dump($M);
+        $am->invoke(array('mypack'), function(){
+            echo 'this is callback with mypack<br>';
         });
     }
-    static function test3(){ //实现中
+    static function test3(){ //已实现
         $am = new ApiMerge();
-        $am->define('mypack', function($require, $export, $module){
-            $LIB = $require('lib/mylib');
-            $module['export'] = array(
-                'foo' => $LIB->foo(),
-                'bar' => $LIB->bar(),
-            );
+        $am->define('mypack', function($p1){
+            echo 'this is mypack and param<p1> is '.$p1.'<br>';
+            return 'ret of mypack';
         });
-        $am->import(array('mypack'), function($M){
-            dump($M);
+        $am->invoke(array('mypack'=>array('p1_value')), function($M){
+            echo 'this is callback with mypack<br>';
+            echo 'parameter<M> is in callback：';
+            echo $M;
         });
-        dump($am);
     }
     static function test4(){ //已实现
         $am = new ApiMerge();
-        $results = $am->import(array(
+        $results = $am->invoke(array(
             'ApiDemo/api1' => array(),
             'ApiDemo/api2' => array('a', 'b'),
             'ApiDemo/api3' => array('contents')
@@ -72,7 +70,7 @@ class ApiMergeTest {
                 'fooAlia' => 'ApiDemo/api3'
             ),
         ));
-        $results = $am->import(array(
+        $results = $am->invoke(array(
             'api1' => array(),
             'api2' => array('a', 'b'),
             'fooAlia' => array('contents')
