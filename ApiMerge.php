@@ -28,22 +28,6 @@ class ApiMergeBase {
 
 //封装模块
 class ApiMergeDefine extends ApiMergeBase {
-    public $require = null;
-    public $export = null;
-    
-    private function _setRequire(){
-        $this->require = function(){};
-    }
-    
-    private function _setExport(){
-        $this->export = function(){};
-    }
-    
-    public function __construct(){
-        $this->_setRequire();
-        $this->_setExport();
-    }
-    
     public function define($id, $cmd){
         //echo 'ApiMergeDefine::define()<br>';
         static::$pool[$id] = $cmd;
