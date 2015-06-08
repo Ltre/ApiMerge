@@ -8,8 +8,9 @@ class ApiMerge extends ApiMergeGlue {
     function define($id, $cmd){
         return call_user_func_array($this->_method_define, func_get_args());
     }
-    function invoke(array $apis, Closure $callback){
-        return call_user_func_array($this->_method_invoke, func_get_args());
+    function invoke(array $apis, Closure $callback = null){
+        $callback || $callback = function(){};
+        return call_user_func_array($this->_method_invoke, array($apis, $callback));
     }
     function config(array $conf){
         call_user_func_array($this->_method_config, func_get_args());
@@ -44,7 +45,7 @@ class ApiMergeDefine extends ApiMergeBase {
     }
     
     public function define($id, $cmd){
-        echo 'ApiMergeDefine::define()<br>';
+        //echo 'ApiMergeDefine::define()<br>';
         static::$pool[$id] = $cmd;
     }
 }
@@ -56,15 +57,28 @@ class ApiMergeInvoke extends ApiMergeBase {
     public $result = array();
     
     public function invoke($apis, $callback){
-    	echo 'ApiMergeInvoke::invoke()<br>';
+    	//echo 'ApiMergeInvoke::invoke()<br>';
     	$results = array();
-    	foreach ($apis as $id => $a) {
-    	    $id = $this->_getRealID($id);
+    	foreach ($apis as $left => $right) {
+    	    $r = $this->_apisFilter($left, $right);
+    	    $id = $r==2 ? $this->_getRealID($left) : $this->_getRealID($right);
+    	    $params = $r==2 ? $right : array();
     	    $callee = $this->_getCallee($id);
-    	    $results[$id] = call_user_func_array($callee, $a);
+    	    $results[$id] = call_user_func_array($callee, $params);
     	}
     	call_user_func_array($callback, $results);
     	return $results;
+    }
+    //检测引入参数
+    private function _apisFilter($left, $right){
+        $re = '/(?:[a-z][a-z0-9_]*)/is';
+        $leftIsID = preg_match($re, $left);
+        $leftIsIndex = is_int($left) && $left >= 0;
+        $rightIsID = is_string($right) && preg_match($re, $right);
+        $rightIsParam = is_array($right);
+        if ($leftIsID && $rightIsParam) return 2;//传了键值对：id=>参数表
+        if ($leftIsIndex && $rightIsID) return 1;//只传了id
+        throw new Exception('invoke操作中：引入参数格式有误', 0, NULL);
     }
     //取实际ID的优先级：alias > base
     private function _getRealID($id){
@@ -89,7 +103,7 @@ class ApiMergeInvoke extends ApiMergeBase {
 //配置模块共有属性
 class ApiMergeConfig extends ApiMergeBase {
     public function config($conf){
-        echo 'ApiMergeConfig::config()<br>';
+        //echo 'ApiMergeConfig::config()<br>';
         @static::$base = $conf['base'] ?: '';
         @static::$alias = $conf['alias'] ?: array();
     }
@@ -144,35 +158,33 @@ class ApiDemo {
 }
 //测试用例
 class ApiMergeTest {
-    static function test1(){
+    static function test1(){ //已实现
         $am = new ApiMerge();
-        $am->invoke(array('ApiDemo/api1','ApiDemo/api2'), function($A1, $A2){
+        $am->invoke(array('ApiDemo/api1','ApiDemo/api2'=>array('a1', 'b2')), function($A1, $A2){
             dump(compact('A1', 'A2'));
         });
+        $am->invoke(array('ApiDemo/api3'=>array('this is log')));
     }
-    static function test2(){
+    static function test2(){ //已实现
         $am = new ApiMerge();
-        $am->define('mypack', function($require, $export){
-            $LIB = $require('lib/mylib');
-            $export['foo'] = $LIB->foo();
+        $am->define('mypack', function(){
+            echo 'this is mypack<br>';
         });
-        $am->invoke(array('mypack'), function($M){
-            dump($M);
+        $am->invoke(array('mypack'), function(){
+            echo 'this is callback with mypack<br>';
         });
     }
-    static function test3(){
+    static function test3(){ //已实现
         $am = new ApiMerge();
-        $am->define('mypack', function($require, $export, $module){
-            $LIB = $require('lib/mylib');
-            $module['export'] = array(
-                'foo' => $LIB->foo(),
-                'bar' => $LIB->bar(),
-            );
+        $am->define('mypack', function($p1){
+            echo 'this is mypack and param<p1> is '.$p1.'<br>';
+            return 'ret of mypack';
         });
-        $am->invoke(array('mypack'), function($M){
-            dump($M);
+        $am->invoke(array('mypack'=>array('p1_value')), function($M){
+            echo 'this is callback with mypack<br>';
+            echo 'parameter<M> is in callback：';
+            echo $M;
         });
-        dump($am);
     }
     static function test4(){ //已实现
         $am = new ApiMerge();
