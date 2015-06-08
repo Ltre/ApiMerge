@@ -1,7 +1,7 @@
 # ApiMerge
 Merge API with PHP
 
-实例API
+示例API
 ```php
 class ApiDemo {
     function api1(){
